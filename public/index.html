@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Cloud File Storage</title>
+  <style>
+    body { 
+      font-family: Arial, sans-serif; 
+      text-align: center; 
+      margin-top: 40px; 
+      background-color: #f7f9fc;
+    }
+    h2 { color: #333; }
+    button { 
+      margin: 10px; 
+      padding: 10px 15px; 
+      border: none;
+      border-radius: 5px;
+      background-color: #007bff; 
+      color: white; 
+      cursor: pointer;
+    }
+    button:hover { background-color: #0056b3; }
+    input[type="file"] {
+      margin: 10px;
+    }
+    ul { list-style-type: none; padding: 0; }
+    li {
+      margin: 8px 0;
+      padding: 8px;
+      background-color: #fff;
+      width: 50%;
+      margin-left: auto;
+      margin-right: auto;
+      border-radius: 6px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+      text-align: left;
+    }
+    li a {
+      text-decoration: none;
+      color: #007bff;
+    }
+    li a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <h2>Cloud File Storage</h2>
+  <p id="welcome"></p>
+  <button id="logoutBtn">Logout</button>
+
+  <!-- Upload Form -->
+  <form id="uploadForm" action="/upload" method="POST" enctype="multipart/form-data">
+    <input type="file" name="file" required>
+    <input type="hidden" id="userEmail" name="userEmail">
+    <button type="submit">Upload File</button>
+  </form>
+
+  <h3>Uploaded Files:</h3>
+  <ul id="fileList"></ul>
+
+  <script type="module">
+    // Import Firebase SDKs
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } 
+      from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+
+    // Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyD2B1obzKt2TTQHRlD5nnkEWrDj08zVm5I",
+      authDomain: "dscc-cloud-project-6dacf.firebaseapp.com",
+      projectId: "dscc-cloud-project-6dacf",
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    // Logout Functionality
+    const logoutBtn = document.getElementById("logoutBtn");
+    logoutBtn.onclick = () => signOut(auth).then(() => {
+      localStorage.clear();
+      window.location.href = "login.html";
+    });
+
+    // Handle Logged-in User
+    onAuthStateChanged(auth, user => {
+      if (user) {
+        console.log("Logged in as:", user.email);
+        document.getElementById("welcome").textContent = `Welcome, ${user.email}`;
+        document.getElementById("userEmail").value = user.email;
+
+        // Load only user's files
+        loadFiles(user.email);
+      } else {
+        window.location.href = "login.html";
+      }
+    });
+
+    // Load User Files
+    async function loadFiles(email) {
+      try {
+        const res = await fetch(`/files?userEmail=${encodeURIComponent(email)}`);
+        const files = await res.json();
+        const list = document.getElementById("fileList");
+        list.innerHTML = '';
+
+        if (files.length === 0) {
+          list.innerHTML = '<li>No files uploaded yet.</li>';
+          return;
+        }
+
+        files.forEach(f => {
+          list.innerHTML += `
+            <li>
+              <strong>${f.filename}</strong><br>
+              <a href="${f.url}" target="_blank">Open File</a> |
+              <a href="/delete/${f.filename}">Delete</a>
+            </li>`;
+        });
+      } catch (err) {
+        console.error("Error loading files:", err);
+      }
+    }
+  </script>
+</body>
+</html>
